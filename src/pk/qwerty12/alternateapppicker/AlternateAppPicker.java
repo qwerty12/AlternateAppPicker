@@ -100,7 +100,10 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 		try {
 			modRes = XModuleResources.createInstance(startupParam.modulePath, null);  
 			XResources.setSystemWideReplacement("android", "layout", "resolver_grid", modRes.fwd(R.layout.resolver_grid_alt));
-		} catch (Throwable t) { XposedBridge.log(t); }
+		} catch (Throwable t) {
+			XposedBridge.log(t);
+			return;
+		}
 		//Add the final touches to the layout and do the listening part
 		hacksToResolverActivity();
 	}
