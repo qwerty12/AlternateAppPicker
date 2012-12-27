@@ -26,8 +26,6 @@ import android.widget.AdapterView.OnItemClickListener;
 
 public class AlternateAppPicker implements IXposedHookZygoteInit {
 
-	private static XModuleResources modRes;
-
 	public void hacksToResolverActivity() {
 		try {
 			Class<?> classResolverActivity = XposedHelpers.findClass("com.android.internal.app.ResolverActivity", null);
@@ -47,7 +45,7 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 								final CheckBox mAlwaysCheckBox = (CheckBox) buttonLayout.getChildAt(0);
 								if (mAlwaysCheckBox instanceof CheckBox) {
 									//Set the text that we couldn't in the layout XML
-									mAlwaysCheckBox.setText(modRes.getIdentifier("activity_resolver_use_always", "string", "android"));
+									mAlwaysCheckBox.setText(mAlwaysCheckBox.getResources().getIdentifier("activity_resolver_use_always", "string", "android"));
 
 									/* Since my hook below causes a crash, just reimplement the listener here, which will work with the checkbox rather than relying upon the buttons, instead of trying to play nice with the original method. */
 									final GridView mGrid = (GridView) XposedHelpers.getObjectField(param.thisObject, "mGrid");
@@ -99,7 +97,7 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 	public void initZygote(StartupParam startupParam) throws Throwable {
 		//Do the resource replacing part
 		try {
-			modRes = XModuleResources.createInstance(startupParam.modulePath, null);  
+			final XModuleResources modRes = XModuleResources.createInstance(startupParam.modulePath, null);  
 			XResources.setSystemWideReplacement("android", "layout", "resolver_grid", modRes.fwd(R.layout.resolver_grid_alt));
 		} catch (Throwable t) {
 			XposedBridge.log(t);
