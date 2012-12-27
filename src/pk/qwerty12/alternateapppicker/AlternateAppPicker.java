@@ -48,8 +48,9 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 								if (mAlwaysCheckBox instanceof CheckBox) {
 									//Set the text that we couldn't in the layout XML
 									mAlwaysCheckBox.setText(modRes.getIdentifier("activity_resolver_use_always", "string", "android"));
-									final GridView mGrid = (GridView) XposedHelpers.getObjectField(param.thisObject, "mGrid");
+
 									/* Since my hook below causes a crash, just reimplement the listener here, which will work with the checkbox rather than relying upon the buttons, instead of trying to play nice with the original method. */
+									final GridView mGrid = (GridView) XposedHelpers.getObjectField(param.thisObject, "mGrid");
 									mGrid.setOnItemClickListener(new OnItemClickListener() {
 									      public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 									          if (XposedHelpers.getBooleanField(param.thisObject, "mAlwaysUseOption")) {
@@ -69,7 +70,7 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 								}
 	
 								//Next, set the layout direction that I had to remove from the layout itself since it was only publicly accessible from the next SDK version 
-								Method setLayoutDirection = XposedHelpers.findMethodExact("android.view.View", null, "setLayoutDirection", int.class);
+								final Method setLayoutDirection = XposedHelpers.findMethodExact(View.class, "setLayoutDirection", int.class);
 								setLayoutDirection.invoke(buttonLayout, 3); //LAYOUT_DIRECTION_LOCALE
 							}
 							else {
@@ -82,7 +83,7 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 						}
 				    });
 			
-			//Crashes
+			//Crashes - either I'm not getting the AdapterView.class part right, or it counts the XC_MethodHook as another argument
 			/*XposedHelpers.findAndHookMethod(classResolverActivity, "onItemClick", AdapterView.class, View.class, int.class, long.class,
 					new XC_MethodHook()
 					{
