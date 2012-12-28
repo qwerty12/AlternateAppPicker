@@ -5,9 +5,12 @@ import java.lang.reflect.Method;
 import pk.qwerty12.alternateapppicker.R;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.content.res.XModuleResources;
 import android.content.res.XResources;
 import android.os.Bundle;
+import android.util.TypedValue;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -26,12 +29,34 @@ import android.widget.AdapterView.OnItemClickListener;
 
 public class AlternateAppPicker implements IXposedHookZygoteInit {
 
+	public boolean isTouchWiz(Class<?> classResolverActivity) {
+		try {
+			return XposedHelpers.findField(true, classResolverActivity, "mIsDeviceDefault") != null;
+		} catch (NoSuchFieldError ignored) {
+		}
+		return false;
+	}
+
 	public void hacksToResolverActivity() {
 		try {
-			Class<?> classResolverActivity = XposedHelpers.findClass("com.android.internal.app.ResolverActivity", null);
+			final Class<?> classResolverActivity = XposedHelpers.findClass("com.android.internal.app.ResolverActivity", null);
 
 			XposedHelpers.findAndHookMethod(classResolverActivity, "onCreate", Bundle.class, Intent.class, CharSequence.class, Intent[].class, java.util.List.class, boolean.class, 
 					new XC_MethodHook() {
+
+						/* JFC, TouchWiz. Yes, I feel dirty for doing this, but it's the only way I can modify Samsung's "enhanced" ResolverActivity logic to not override my layout. */ 
+						@Override
+						protected void beforeHookedMethod(final MethodHookParam param) throws Throwable {
+							if (isTouchWiz(classResolverActivity)) {
+								XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, new XC_MethodHook() {
+									@Override
+									protected void beforeHookedMethod(MethodHookParam paramResolveAttribute2) throws Throwable {
+										paramResolveAttribute2.setResult(Boolean.FALSE);
+									}
+								});
+							}
+						}
+
 						@Override
 						protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
 							boolean problem = false;
@@ -97,7 +122,7 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 	public void initZygote(StartupParam startupParam) throws Throwable {
 		//Do the resource replacing part
 		try {
-			final XModuleResources modRes = XModuleResources.createInstance(startupParam.modulePath, null);  
+			final XModuleResources modRes = XModuleResources.createInstance(startupParam.modulePath, null);
 			XResources.setSystemWideReplacement("android", "layout", "resolver_grid", modRes.fwd(R.layout.resolver_grid_alt));
 		} catch (Throwable t) {
 			XposedBridge.log(t);
