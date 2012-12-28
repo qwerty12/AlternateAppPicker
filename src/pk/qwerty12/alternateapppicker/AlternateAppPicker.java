@@ -46,15 +46,22 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 
 						/* JFC, TouchWiz. Yes, I feel dirty for doing this, but it's the only way I can modify Samsung's "enhanced" ResolverActivity logic to not override my layout. */ 
 						@Override
-						protected void beforeHookedMethod(final MethodHookParam param) throws Throwable {
+						protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+							
 							if (isTouchWiz(classResolverActivity)) {
+								XposedHelpers.setAdditionalStaticField(ContextThemeWrapper.class, "isResolverActivity", true);
+
 								XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, new XC_MethodHook() {
 									@Override
-									protected void beforeHookedMethod(MethodHookParam paramResolveAttribute2) throws Throwable {
-										paramResolveAttribute2.setResult(Boolean.FALSE);
+									protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+										if ((Boolean) XposedHelpers.getAdditionalStaticField(ContextThemeWrapper.class, "isResolverActivity")) {
+											XposedHelpers.setAdditionalStaticField(ContextThemeWrapper.class, "isResolverActivity", false);
+											param.setResult(Boolean.FALSE);
+										}
 									}
 								});
 							}
+
 						}
 
 						@Override
