@@ -10,7 +10,6 @@ import android.content.res.XModuleResources;
 import android.content.res.XResources;
 import android.os.Bundle;
 import android.util.TypedValue;
-import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -29,7 +28,21 @@ import android.widget.AdapterView.OnItemClickListener;
 
 public class AlternateAppPicker implements IXposedHookZygoteInit {
 
-	public boolean isTouchWiz(Class<?> classResolverActivity) {
+	private boolean isResolverActivity;
+	private boolean isAlreadyHooked;
+
+	private XC_MethodHook getThemeHook = new XC_MethodHook() {
+		@Override
+		protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+			if (isResolverActivity) {
+				isResolverActivity = false;
+				param.setResult(Boolean.FALSE);
+			}
+		}
+	};
+
+	//TODO: as I found out, one can be running an AOSP theme on a TouchWiz ROM. Fix this check
+	public boolean determineTouchWiz(final Class<?> classResolverActivity) {
 		try {
 			return XposedHelpers.findField(true, classResolverActivity, "mIsDeviceDefault") != null;
 		} catch (NoSuchFieldError ignored) {
@@ -37,10 +50,8 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 		return false;
 	}
 
-	public void hacksToResolverActivity() {
+	public void hacksToResolverActivity(final Class<?> classResolverActivity, final boolean isTouchWiz) {
 		try {
-			final Class<?> classResolverActivity = XposedHelpers.findClass("com.android.internal.app.ResolverActivity", null);
-
 			XposedHelpers.findAndHookMethod(classResolverActivity, "onCreate", Bundle.class, Intent.class, CharSequence.class, Intent[].class, java.util.List.class, boolean.class, 
 					new XC_MethodHook() {
 
@@ -48,18 +59,13 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 						@Override
 						protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 							
-							if (isTouchWiz(classResolverActivity)) {
-								XposedHelpers.setAdditionalStaticField(ContextThemeWrapper.class, "isResolverActivity", true);
+							if (isTouchWiz) {
+								isResolverActivity = true;
 
-								XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, new XC_MethodHook() {
-									@Override
-									protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-										if ((Boolean) XposedHelpers.getAdditionalStaticField(ContextThemeWrapper.class, "isResolverActivity")) {
-											XposedHelpers.setAdditionalStaticField(ContextThemeWrapper.class, "isResolverActivity", false);
-											param.setResult(Boolean.FALSE);
-										}
-									}
-								});
+								if (!isAlreadyHooked) {
+									XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, getThemeHook);
+									isAlreadyHooked = true;
+								}
 							}
 
 						}
@@ -136,7 +142,8 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 			return;
 		}
 		//Add the final touches to the layout and do the listening part
-		hacksToResolverActivity();
+		final Class<?> classResolverActivity = XposedHelpers.findClass("com.android.internal.app.ResolverActivity", null);
+		hacksToResolverActivity(classResolverActivity, determineTouchWiz(classResolverActivity));
 	}
 
 }
