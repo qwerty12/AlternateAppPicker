@@ -31,16 +31,6 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 	private boolean isResolverActivity;
 	private boolean isAlreadyHooked;
 
-	private XC_MethodHook getThemeHook = new XC_MethodHook() {
-		@Override
-		protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-			if (isResolverActivity) {
-				isResolverActivity = false;
-				param.setResult(Boolean.FALSE);
-			}
-		}
-	};
-
 	//TODO: as I found out, one can be running an AOSP theme on a TouchWiz ROM. Fix this check
 	public boolean determineTouchWiz(final Class<?> classResolverActivity) {
 		try {
@@ -63,7 +53,15 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 								isResolverActivity = true;
 
 								if (!isAlreadyHooked) {
-									XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, getThemeHook);
+									XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, new XC_MethodHook() {
+										@Override
+										protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+											if (isResolverActivity) {
+												isResolverActivity = false;
+												param.setResult(Boolean.FALSE);
+											}
+										}
+									});
 									isAlreadyHooked = true;
 								}
 							}
