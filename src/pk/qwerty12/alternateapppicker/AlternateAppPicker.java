@@ -3,7 +3,6 @@ package pk.qwerty12.alternateapppicker;
 import java.lang.reflect.Method;
 
 import pk.qwerty12.alternateapppicker.R;
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.content.res.XModuleResources;
@@ -15,7 +14,6 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.CheckBox;
 import android.widget.GridView;
-import android.widget.Toast;
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -28,13 +26,10 @@ import android.widget.AdapterView.OnItemClickListener;
 
 public class AlternateAppPicker implements IXposedHookZygoteInit {
 
-	private boolean isResolverActivity;
-	private boolean isAlreadyHooked;
-
 	//TODO: as I found out, one can be running an AOSP theme on a TouchWiz ROM. Fix this check
 	public boolean determineTouchWiz(final Class<?> classResolverActivity) {
 		try {
-			return XposedHelpers.findField(true, classResolverActivity, "mIsDeviceDefault") != null;
+			return XposedHelpers.findField(classResolverActivity, "mIsDeviceDefault") != null;
 		} catch (NoSuchFieldError ignored) {
 		}
 		return false;
@@ -45,32 +40,27 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 			XposedHelpers.findAndHookMethod(classResolverActivity, "onCreate", Bundle.class, Intent.class, CharSequence.class, Intent[].class, java.util.List.class, boolean.class, 
 					new XC_MethodHook() {
 
+						Unhook hookResolveAttribute;
+
 						/* JFC, TouchWiz. Yes, I feel dirty for doing this, but it's the only way I can modify Samsung's "enhanced" ResolverActivity logic to not override my layout. */ 
 						@Override
 						protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 							
 							if (isTouchWiz) {
-								isResolverActivity = true;
-
-								if (!isAlreadyHooked) {
-									XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, new XC_MethodHook() {
+									hookResolveAttribute = XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, new XC_MethodHook() {
 										@Override
 										protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-											if (isResolverActivity) {
-												isResolverActivity = false;
 												param.setResult(Boolean.FALSE);
-											}
 										}
 									});
-									isAlreadyHooked = true;
-								}
 							}
 
 						}
 
 						@Override
 						protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
-							boolean problem = false;
+							if (isTouchWiz)
+								hookResolveAttribute.unhook();
 							//By importing the resolver_grid_alt into a project built with the SDK, I had to remove two things: the string on the CheckBox and the layout direction, so bring them back in code
 							/* First, set the correct string on the CheckBox.
 							 * To do this within the layout, I'd have to import the strings from Android proper and include a local copy - no thanks. I did attempt to do the following using the Resource way but ended up with headaches, hence the parent stuff below
@@ -99,20 +89,10 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 									      }
 									});
 								}
-								else {
-									problem = true;
-								}
 	
 								//Next, set the layout direction that I had to remove from the layout itself since it was only publicly accessible from the next SDK version 
 								final Method setLayoutDirection = XposedHelpers.findMethodExact(View.class, "setLayoutDirection", int.class);
 								setLayoutDirection.invoke(buttonLayout, 3); //LAYOUT_DIRECTION_LOCALE
-							}
-							else {
-								problem = true;
-							}
-							
-							if (problem) { //I don't know what the policy on informing users from a hack is, but maybe it will be appreciated
-								Toast.makeText((Context) param.thisObject, "Something went wrong.\nPlease disable the " + AlternateAppPicker.class.getSimpleName() + " modification in Xposed Installer and let the developer know, please.", Toast.LENGTH_LONG).show();
 							}
 						}
 				    });

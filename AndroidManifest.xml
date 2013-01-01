@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="pk.qwerty12.alternateapppicker"
-    android:versionCode="1"
-    android:versionName="1.01" >
+    android:versionCode="3"
+    android:versionName="1.02-beta" >
 
     <uses-sdk
         android:minSdkVersion="16"
@@ -11,7 +11,8 @@
         android:allowBackup="true"
         android:label="@string/app_name" >
         <meta-data android:name="xposedmodule" android:value="true"/>
-        <meta-data android:name="xposedminversion" android:value="2.0rc2.*"/>
+        <meta-data android:name="xposedminversion" android:value="2.0*"/>
+        <meta-data android:name="xposeddescription" android:value="Shows an ICS-style version of the 'choose application to open with' dialog in which you click the app only once, and tick Always if you want the choice to be permanent."/>
     </application>
 
 </manifest>
