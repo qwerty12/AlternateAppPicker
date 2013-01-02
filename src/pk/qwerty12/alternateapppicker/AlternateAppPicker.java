@@ -26,7 +26,6 @@ import android.widget.AdapterView.OnItemClickListener;
 
 public class AlternateAppPicker implements IXposedHookZygoteInit {
 
-	//TODO: as I found out, one can be running an AOSP theme on a TouchWiz ROM. Fix this check
 	public boolean determineTouchWiz(final Class<?> classResolverActivity) {
 		try {
 			return XposedHelpers.findField(classResolverActivity, "mIsDeviceDefault") != null;
@@ -66,36 +65,32 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 							 * To do this within the layout, I'd have to import the strings from Android proper and include a local copy - no thanks. I did attempt to do the following using the Resource way but ended up with headaches, hence the parent stuff below
 							 */
 							final ViewGroup buttonLayout = (ViewGroup) ((View) XposedHelpers.getObjectField(param.thisObject, "mAlwaysButton")).getParent();
-							if (buttonLayout instanceof ViewGroup) {
-								//I can assume mAlwaysCheckBox will be at buttonLayout[0] (first child of the linearLayout), unless I change the layout, so skip iteration of buttonLayout with getChildCount & getChildAt
-								final CheckBox mAlwaysCheckBox = (CheckBox) buttonLayout.getChildAt(0);
-								if (mAlwaysCheckBox instanceof CheckBox) {
-									//Set the text that we couldn't in the layout XML
-									mAlwaysCheckBox.setText(mAlwaysCheckBox.getResources().getIdentifier("activity_resolver_use_always", "string", "android"));
+							//I can assume mAlwaysCheckBox will be at buttonLayout[0] (first child of the linearLayout), unless I change the layout, so skip iteration of buttonLayout with getChildCount & getChildAt
+							final CheckBox mAlwaysCheckBox = (CheckBox) buttonLayout.getChildAt(0);
+							//Set the text that we couldn't in the layout XML
+							mAlwaysCheckBox.setText(mAlwaysCheckBox.getResources().getIdentifier("activity_resolver_use_always", "string", "android"));
 
-									/* Since my hook below causes a crash, just reimplement the listener here, which will work with the checkbox rather than relying upon the buttons, instead of trying to play nice with the original method. */
-									final GridView mGrid = (GridView) XposedHelpers.getObjectField(param.thisObject, "mGrid");
-									mGrid.setOnItemClickListener(new OnItemClickListener() {
-									      public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-									          if (XposedHelpers.getBooleanField(param.thisObject, "mAlwaysUseOption")) {
-									              final int checkedPos = mGrid.getCheckedItemPosition();
-									              final boolean enabled = checkedPos != GridView.INVALID_POSITION;
-									              if (enabled) {
-									            	  XposedHelpers.callMethod(param.thisObject, "startSelected", position, mAlwaysCheckBox.isChecked());
-									              }
-									          } else {
-									        	  XposedHelpers.callMethod(param.thisObject, "startSelected", position, false);
-									          }
-									      }
-									});
-								}
-	
-								//Next, set the layout direction that I had to remove from the layout itself since it was only publicly accessible from the next SDK version 
-								final Method setLayoutDirection = XposedHelpers.findMethodExact(View.class, "setLayoutDirection", int.class);
-								setLayoutDirection.invoke(buttonLayout, 3); //LAYOUT_DIRECTION_LOCALE
-							}
-						}
-				    });
+							/* Since my hook below causes a crash, just reimplement the listener here, which will work with the checkbox rather than relying upon the buttons, instead of trying to play nice with the original method. */
+							final GridView mGrid = (GridView) XposedHelpers.getObjectField(param.thisObject, "mGrid");
+							mGrid.setOnItemClickListener(new OnItemClickListener() {
+							      public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+							          if (XposedHelpers.getBooleanField(param.thisObject, "mAlwaysUseOption")) {
+							              final int checkedPos = mGrid.getCheckedItemPosition();
+							              final boolean enabled = checkedPos != GridView.INVALID_POSITION;
+							              if (enabled) {
+							            	  XposedHelpers.callMethod(param.thisObject, "startSelected", position, mAlwaysCheckBox.isChecked());
+							              }
+							          } else {
+							        	  XposedHelpers.callMethod(param.thisObject, "startSelected", position, false);
+							          }
+							      }
+							});
+
+						//Next, set the layout direction that I had to remove from the layout itself since it was only publicly accessible from the next SDK version 
+						final Method setLayoutDirection = XposedHelpers.findMethodExact(View.class, "setLayoutDirection", int.class);
+						setLayoutDirection.invoke(buttonLayout, 3); //LAYOUT_DIRECTION_LOCALE
+					}
+			});
 			
 			//Crashes - either I'm not getting the AdapterView.class part right, or it counts the XC_MethodHook as another argument
 			/*XposedHelpers.findAndHookMethod(classResolverActivity, "onItemClick", AdapterView.class, View.class, int.class, long.class,
