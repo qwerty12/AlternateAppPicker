@@ -16,8 +16,10 @@ import android.widget.CheckBox;
 import android.widget.GridView;
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 import android.widget.AdapterView.OnItemClickListener;
 
 
@@ -26,6 +28,7 @@ import android.widget.AdapterView.OnItemClickListener;
 
 public class AlternateAppPicker implements IXposedHookZygoteInit {
 
+	//If you're running an AOSP theme on a TouchWiz ROM, resolveAttribute would've returned false anyway 
 	public boolean determineTouchWiz(final Class<?> classResolverActivity) {
 		try {
 			return XposedHelpers.findField(classResolverActivity, "mIsDeviceDefault") != null;
@@ -46,10 +49,10 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 						protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 							
 							if (isTouchWiz) {
-									hookResolveAttribute = XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, new XC_MethodHook() {
+									hookResolveAttribute = XposedHelpers.findAndHookMethod(Resources.Theme.class, "resolveAttribute", int.class, TypedValue.class, boolean.class, new XC_MethodReplacement() {
 										@Override
-										protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-												param.setResult(Boolean.FALSE);
+										protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+											return Boolean.FALSE;
 										}
 									});
 							}
