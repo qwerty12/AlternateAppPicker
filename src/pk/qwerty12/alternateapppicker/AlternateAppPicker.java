@@ -32,8 +32,7 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 	public boolean determineTouchWiz(final Class<?> classResolverActivity) {
 		try {
 			return XposedHelpers.findField(classResolverActivity, "mIsDeviceDefault") != null;
-		} catch (NoSuchFieldError ignored) {
-		}
+		} catch (NoSuchFieldError ignored) {}
 		return false;
 	}
 
@@ -67,7 +66,8 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 							/* First, set the correct string on the CheckBox.
 							 * To do this within the layout, I'd have to import the strings from Android proper and include a local copy - no thanks. I did attempt to do the following using the Resource way but ended up with headaches, hence the parent stuff below
 							 */
-							final ViewGroup buttonLayout = (ViewGroup) ((View) XposedHelpers.getObjectField(param.thisObject, "mAlwaysButton")).getParent();
+							final View mAlwaysButton = (View) XposedHelpers.getObjectField(param.thisObject, "mAlwaysButton");
+							final ViewGroup buttonLayout = (ViewGroup) mAlwaysButton.getParent();
 							//I can assume mAlwaysCheckBox will be at buttonLayout[0] (first child of the linearLayout), unless I change the layout, so skip iteration of buttonLayout with getChildCount & getChildAt
 							final CheckBox mAlwaysCheckBox = (CheckBox) buttonLayout.getChildAt(0);
 							//Set the text that we couldn't in the layout XML
@@ -89,9 +89,9 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 							      }
 							});
 
-						//Next, set the layout direction that I had to remove from the layout itself since it was only publicly accessible from the next SDK version 
-						final Method setLayoutDirection = XposedHelpers.findMethodExact(View.class, "setLayoutDirection", int.class);
-						setLayoutDirection.invoke(buttonLayout, 3); //LAYOUT_DIRECTION_LOCALE
+							//Next, set the layout direction that I had to remove from the layout itself since it was only publicly accessible from the next SDK version 
+							final Method setLayoutDirection = XposedHelpers.findMethodExact(View.class, "setLayoutDirection", int.class);
+							setLayoutDirection.invoke(buttonLayout, 3); //LAYOUT_DIRECTION_LOCALE
 					}
 			});
 			
