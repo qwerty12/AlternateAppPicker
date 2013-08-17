@@ -70,8 +70,6 @@ public class AlternateAppPicker implements IXposedHookZygoteInit {
 							final ViewGroup buttonLayout = (ViewGroup) mAlwaysButton.getParent();
 							//I can assume mAlwaysCheckBox will be at buttonLayout[0] (first child of the linearLayout), unless I change the layout, so skip iteration of buttonLayout with getChildCount & getChildAt
 							final CheckBox mAlwaysCheckBox = (CheckBox) buttonLayout.getChildAt(0);
-							//Set the text that we couldn't in the layout XML
-							mAlwaysCheckBox.setText(mAlwaysCheckBox.getResources().getIdentifier("activity_resolver_use_always", "string", "android"));
 
 							/* Since my hook below causes a crash, just reimplement the listener here, which will work with the checkbox rather than relying upon the buttons, instead of trying to play nice with the original method. */
 							final GridView mGrid = (GridView) XposedHelpers.getObjectField(param.thisObject, "mGrid");

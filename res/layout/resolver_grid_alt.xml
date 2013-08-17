@@ -44,13 +44,14 @@
         android:id="@+id/button_bar"
         android:visibility="gone"
         style="?android:attr/buttonBarStyle"
+        android:layout_marginLeft="14dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal" >
         <CheckBox android:id="@+id/checkbox_always"
                 android:layout_width="wrap_content"
                 android:gravity="center"
-                android:textSize="14sp"
+                android:text="@string/alwaysUse"
                 android:layout_height="wrap_content"
                 android:enabled="true" />
         <!-- Dummies to prevent ResolverActivity from crashing !-->
